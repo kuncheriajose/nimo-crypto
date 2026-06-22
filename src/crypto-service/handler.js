@@ -41,6 +41,9 @@ exports.handler = async (event) => {
     if (err.code === "NOT_FOUND") {
       return response.notFound(err.message);
     }
+    if (err.code === "SES_EMAIL_NOT_VERIFIED" || err.code === "SES_MESSAGE_REJECTED") {
+      return response.badRequest(err.message);
+    }
     console.error(err);
     return response.serverError();
   }
