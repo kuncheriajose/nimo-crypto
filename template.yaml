@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Nimo Crypto API
+
+Parameters:
+  SenderEmail:
+    Type: String
+    Default: kuncheria96@gmail.com
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref HistoryTable
+        SENDER_EMAIL: !Ref SenderEmail
+
+Resources:
+  HistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  PriceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src/crypto-service/handler.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HistoryTable
+        - SESCrudPolicy:
+            IdentityName: !Ref SenderEmail
+      Events:
+        PostPrice:
+          Type: Api
+          Properties:
+            Path: /crypto/price
+            Method: post
+
+  HistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src/history-service/handler.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref HistoryTable
+      Events:
+        GetHistory:
+          Type: Api
+          Properties:
+            Path: /history
+            Method: get
+
+Outputs:
+  ApiUrl:
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
